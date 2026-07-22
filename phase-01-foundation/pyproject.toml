@@ -1,0 +1,14 @@
+[project]
+name = "applied-genai-foundation"
+version = "0.1.0"
+description = "Foundation API and engineering tooling for the Applied GenAI Roadmap."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "Clifford V. Juan" }
+]
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
