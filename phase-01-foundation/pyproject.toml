@@ -7,10 +7,14 @@ requires-python = ">=3.12,<3.13"
 authors = [
     { name = "Clifford V. Juan" }
 ]
-dependencies = []
+dependencies = [
+    "fastapi>=0.139.2",
+    "uvicorn[standard]>=0.51.0",
+]
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "mypy>=1.17.0",
     "pre-commit>=4.2.0",
     "pytest>=8.4.0",
@@ -61,7 +65,9 @@ docstring-code-format = true
 
 [tool.mypy]
 python_version = "3.12"
-files = ["src", "tests"]
+files = ["src/applied_genai", "tests"]
+mypy_path = ["src"]
+explicit_package_bases = true
 strict = true
 pretty = true
 show_error_codes = true

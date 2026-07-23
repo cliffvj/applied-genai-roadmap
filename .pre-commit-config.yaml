@@ -19,7 +19,9 @@ repos:
 
       - id: phase-01-mypy
         name: Phase 1 - MyPy type check
-        entry: uv run --project phase-01-foundation mypy --config-file phase-01-foundation/pyproject.toml phase-01-foundation/src phase-01-foundation/tests
+        entry: uv run --project phase-01-foundation mypy --config-file phase-01-foundation/pyproject.toml phase-01-foundation/src/applied_genai phase-01-foundation/tests
         language: system
         pass_filenames: false
         require_serial: true
+
+        

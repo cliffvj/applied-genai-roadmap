@@ -22,7 +22,7 @@ By completing this phase, the project will demonstrate the ability to:
 |---|---|---|
 | 1 | Repository and project foundation | Complete |
 | 2 | Python tooling and dependency management | Complete |
-| 3 | FastAPI application and REST endpoints | Planned |
+| 3 | FastAPI application and REST endpoints | Complete |
 | 4 | Pydantic validation and configuration | Planned |
 | 5 | Async operations and external service client | Planned |
 | 6 | Automated testing and quality controls | Planned |
@@ -251,6 +251,44 @@ Applied GenAI Foundation
 
 This minimal package provides a valid target for packaging, linting, type checking, and automated tests before the FastAPI application is introduced.
 
+## FastAPI Service
+
+Phase 1 now includes a working FastAPI service with application metadata, health probes, versioned routing, and generated API documentation.
+
+### Available Endpoints
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/` | Return service information |
+| GET | `/health/live` | Confirm that the application process is alive |
+| GET | `/health/ready` | Confirm that the API is ready to receive traffic |
+| GET | `/api/v1/status` | Return versioned API operational information |
+| GET | `/openapi.json` | Return the generated OpenAPI schema |
+| GET | `/docs` | Open Swagger UI |
+| GET | `/redoc` | Open ReDoc |
+
+### Run the Development Server
+
+From `phase-01-foundation`:
+
+```powershell
+uv run uvicorn applied_genai.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Open the Swagger documentation:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+Open the ReDoc documentation:
+
+```text
+http://127.0.0.1:8000/redoc
+```
+
+The development server uses automatic reload and should not be treated as the final production process configuration.
+
 ## Testing and Coverage
 
 The initial tests validate:
@@ -292,4 +330,6 @@ uv run --project phase-01-foundation pre-commit run --all-files
 
 ## Status
 
-Commits 1 and 2 are complete. The project foundation and modern Python development toolchain are operational.
+Commits 1 through 3 are complete.
+
+The project now includes a reproducible Python development environment, automated code-quality controls, package validation, and a tested FastAPI service with health probes, versioned routing, and OpenAPI documentation.
