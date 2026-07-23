@@ -20,8 +20,8 @@ By completing this phase, the project will demonstrate the ability to:
 
 | Commit | Scope | Status |
 |---|---|---|
-| 1 | Repository and project foundation | In Progress |
-| 2 | Python tooling and dependency management | Planned |
+| 1 | Repository and project foundation | Complete |
+| 2 | Python tooling and dependency management | Complete |
 | 3 | FastAPI application and REST endpoints | Planned |
 | 4 | Pydantic validation and configuration | Planned |
 | 5 | Async operations and external service client | Planned |
@@ -43,7 +43,7 @@ Later phases will extend this service to support:
 - Health and readiness checks
 - Metrics and tracing
 
-## Initial Structure
+## Project Structure
 
 ```text
 phase-01-foundation/
@@ -51,13 +51,245 @@ phase-01-foundation/
 ├── scripts/
 ├── src/
 │   └── applied_genai/
+│       └── __init__.py
 ├── tests/
+│   ├── __init__.py
+│   └── test_package.py
 ├── .python-version
 ├── pyproject.toml
-└── README.md
+├── README.md
+└── uv.lock
+```
+
+## Development Toolchain
+
+| Tool | Purpose |
+|---|---|
+| uv | Python runtime, virtual environment, dependency, and lock-file management |
+| Python 3.12 | Project-specific Python runtime |
+| Ruff | Python linting, import sorting, and formatting |
+| MyPy | Static type checking |
+| pytest | Automated test execution |
+| pytest-cov | Test coverage measurement |
+| pre-commit | Automated quality checks before Git commits |
+| Hatchling | Python package build backend |
+
+## Python Environment
+
+The host operating system may use a different Python version. This project uses a separately managed Python 3.12 environment through `uv`.
+
+The project version is defined in:
+
+```text
+.python-version
+```
+
+```text
+3.12
+```
+
+The supported Python range is declared in `pyproject.toml`:
+
+```toml
+requires-python = ">=3.12,<3.13"
+```
+
+Synchronize the project environment from inside `phase-01-foundation`:
+
+```powershell
+uv sync --locked
+```
+
+Verify the active project interpreter:
+
+```powershell
+uv run python --version
+uv run python -c "import sys; print(sys.executable)"
+```
+
+## Local Development
+
+The simplest workflow is to run Python development commands from inside the Phase 1 directory:
+
+```powershell
+cd phase-01-foundation
+```
+
+### Run Ruff linting
+
+```powershell
+uv run ruff check .
+```
+
+Automatically apply safe lint fixes:
+
+```powershell
+uv run ruff check --fix .
+```
+
+### Run Ruff formatting
+
+Apply formatting:
+
+```powershell
+uv run ruff format .
+```
+
+Verify formatting without changing files:
+
+```powershell
+uv run ruff format --check .
+```
+
+### Run MyPy
+
+```powershell
+uv run mypy
+```
+
+### Run pytest and coverage
+
+```powershell
+uv run pytest
+```
+
+### Build the Python package
+
+```powershell
+uv build
+```
+
+Generated distributions are placed under:
+
+```text
+dist/
+```
+
+The `dist/` directory is a generated build artifact and is not committed to Git.
+
+## Repository-Root Commands
+
+The repository uses a multi-phase layout. Running `uv` with `--project` selects the Phase 1 environment, but it does not change the command's working directory.
+
+From the repository root, use explicit configuration and target paths.
+
+### Ruff
+
+```powershell
+uv run --project phase-01-foundation ruff check phase-01-foundation
+uv run --project phase-01-foundation ruff format --check phase-01-foundation
+```
+
+### MyPy
+
+```powershell
+uv run --project phase-01-foundation mypy `
+  --config-file phase-01-foundation/pyproject.toml `
+  phase-01-foundation/src `
+  phase-01-foundation/tests
+```
+
+### pytest
+
+```powershell
+uv run --project phase-01-foundation pytest `
+  -c phase-01-foundation/pyproject.toml `
+  phase-01-foundation/tests
+```
+
+### Pre-commit
+
+```powershell
+uv run --project phase-01-foundation pre-commit run --all-files
+```
+
+## Pre-commit Quality Gates
+
+The repository-level `.pre-commit-config.yaml` currently validates Phase 1 with:
+
+- Ruff linting
+- Ruff formatting
+- MyPy static type checking
+
+Install the Git hook from the repository root:
+
+```powershell
+uv run --project phase-01-foundation pre-commit install
+```
+
+Run all hooks manually:
+
+```powershell
+uv run --project phase-01-foundation pre-commit run --all-files
+```
+
+Expected result:
+
+```text
+Phase 1 - Ruff lint........................................Passed
+Phase 1 - Ruff format......................................Passed
+Phase 1 - MyPy type check..................................Passed
+```
+
+## Current Package Interface
+
+The initial package exposes basic project metadata:
+
+```python
+from applied_genai import __version__, project_name
+
+print(__version__)
+print(project_name())
+```
+
+Expected output:
+
+```text
+0.1.0
+Applied GenAI Foundation
+```
+
+This minimal package provides a valid target for packaging, linting, type checking, and automated tests before the FastAPI application is introduced.
+
+## Testing and Coverage
+
+The initial tests validate:
+
+- The package version
+- The human-readable project name
+
+The configured minimum test coverage is:
+
+```text
+80%
+```
+
+Run the complete test suite:
+
+```powershell
+uv run pytest
+```
+
+## Commit 2 Completion Gate
+
+Commit 2 is ready to complete when all commands below pass from inside `phase-01-foundation`:
+
+```powershell
+uv sync --locked
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy
+uv run pytest
+uv build
+```
+
+Then run the repository-level pre-commit checks:
+
+```powershell
+cd ..
+uv run --project phase-01-foundation pre-commit run --all-files
 ```
 
 ## Status
 
-Phase 1 is currently in development.
-
+Commits 1 and 2 are complete. The project foundation and modern Python development toolchain are operational.

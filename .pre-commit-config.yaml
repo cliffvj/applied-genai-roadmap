@@ -1,0 +1,25 @@
+minimum_pre_commit_version: "4.0.0"
+
+repos:
+  - repo: local
+    hooks:
+      - id: phase-01-ruff-check
+        name: Phase 1 - Ruff lint
+        entry: uv run --project phase-01-foundation ruff check --fix phase-01-foundation
+        language: system
+        types: [python]
+        require_serial: true
+
+      - id: phase-01-ruff-format
+        name: Phase 1 - Ruff format
+        entry: uv run --project phase-01-foundation ruff format phase-01-foundation
+        language: system
+        types: [python]
+        require_serial: true
+
+      - id: phase-01-mypy
+        name: Phase 1 - MyPy type check
+        entry: uv run --project phase-01-foundation mypy --config-file phase-01-foundation/pyproject.toml phase-01-foundation/src phase-01-foundation/tests
+        language: system
+        pass_filenames: false
+        require_serial: true
