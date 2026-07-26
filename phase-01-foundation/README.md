@@ -1,6 +1,6 @@
 # Phase 1 — Applied GenAI Engineering Foundation
 
-Phase 1 establishes the Python development, API, testing, automation, and documentation foundation that will support the later AI infrastructure phases.
+Phase 1 establishes the Python development, API, validation, testing, automation, and documentation foundation that will support the later AI infrastructure phases.
 
 ## Objectives
 
@@ -9,11 +9,12 @@ By completing this phase, the project will demonstrate the ability to:
 - Manage a modern Python project
 - Structure maintainable application code
 - Build and document REST APIs with FastAPI
-- Validate API data using Pydantic
+- Define validated API contracts using Pydantic
+- Load and validate environment-based application settings
 - Implement asynchronous operations
 - Write automated tests
 - Apply linting and static type checking
-- Package the service in a container
+- Package the service for distribution
 - Validate changes through continuous integration
 
 ## Planned Commits
@@ -23,7 +24,7 @@ By completing this phase, the project will demonstrate the ability to:
 | 1 | Repository and project foundation | Complete |
 | 2 | Python tooling and dependency management | Complete |
 | 3 | FastAPI application and REST endpoints | Complete |
-| 4 | Pydantic validation and configuration | Planned |
+| 4 | Pydantic models and application configuration | Complete |
 | 5 | Async operations and external service client | Planned |
 | 6 | Automated testing and quality controls | Planned |
 | 7 | Containerization and health checks | Planned |
@@ -31,54 +32,87 @@ By completing this phase, the project will demonstrate the ability to:
 
 ## Planned Application
 
-Phase 1 will produce a small API service that acts as the initial control plane for the wider roadmap.
+Phase 1 produces a small API service that acts as the initial control plane for the wider roadmap.
 
 Later phases will extend this service to support:
 
 - Local and remote LLM inference
-- Model metadata
+- Model metadata and discovery
 - Retrieval-Augmented Generation
 - Streaming responses
 - GPU workload status
-- Health and readiness checks
-- Metrics and tracing
+- Dependency-aware readiness checks
+- Metrics and distributed tracing
 
 ## Project Structure
 
 ```text
 phase-01-foundation/
 ├── docs/
+│   └── configuration.md
 ├── scripts/
 ├── src/
 │   └── applied_genai/
-│       └── __init__.py
+│       ├── __init__.py
+│       ├── main.py
+│       ├── api/
+│       │   ├── __init__.py
+│       │   ├── router.py
+│       │   └── routes/
+│       │       ├── __init__.py
+│       │       ├── prompts.py
+│       │       └── system.py
+│       ├── core/
+│       │   ├── __init__.py
+│       │   └── config.py
+│       └── schemas/
+│           ├── __init__.py
+│           ├── base.py
+│           ├── prompt.py
+│           └── system.py
 ├── tests/
 │   ├── __init__.py
-│   └── test_package.py
+│   ├── test_config.py
+│   ├── test_main.py
+│   ├── test_package.py
+│   ├── test_prompt_routes.py
+│   ├── test_prompt_schemas.py
+│   ├── test_settings_integration.py
+│   ├── test_system_routes.py
+│   └── test_system_schemas.py
+├── .env.example
 ├── .python-version
 ├── pyproject.toml
 ├── README.md
 └── uv.lock
 ```
 
+Generated directories such as `.venv`, `dist`, `htmlcov`, and Python tool caches are ignored by Git.
+
 ## Development Toolchain
 
 | Tool | Purpose |
 |---|---|
-| uv | Python runtime, virtual environment, dependency, and lock-file management |
+| uv | Python runtime, environment, dependency, lock-file, and build management |
 | Python 3.12 | Project-specific Python runtime |
+| FastAPI | ASGI API framework and OpenAPI generation |
+| Uvicorn | Local ASGI development server |
+| Pydantic | Runtime request, response, and field validation |
+| Pydantic Settings | Environment-variable and dotenv configuration |
+| python-dotenv | Dotenv file support |
 | Ruff | Python linting, import sorting, and formatting |
-| MyPy | Static type checking |
+| MyPy | Strict static type checking |
 | pytest | Automated test execution |
 | pytest-cov | Test coverage measurement |
-| pre-commit | Automated quality checks before Git commits |
+| httpx2 | Test-client HTTP transport |
+| pre-commit | Automated local quality checks before Git commits |
 | Hatchling | Python package build backend |
 
 ## Python Environment
 
-The host operating system may use a different Python version. This project uses a separately managed Python 3.12 environment through `uv`.
+The host operating system may use another Python version. This project uses Python 3.12 through `uv`.
 
-The project version is defined in:
+The project runtime is selected by:
 
 ```text
 .python-version
@@ -88,152 +122,268 @@ The project version is defined in:
 3.12
 ```
 
-The supported Python range is declared in `pyproject.toml`:
+The supported version range is declared in `pyproject.toml`:
 
 ```toml
 requires-python = ">=3.12,<3.13"
 ```
 
-Synchronize the project environment from inside `phase-01-foundation`:
+Synchronize the environment:
 
-```powershell
+```bash
 uv sync --locked
 ```
 
-Verify the active project interpreter:
+Verify the project interpreter:
 
-```powershell
+```bash
 uv run python --version
 uv run python -c "import sys; print(sys.executable)"
 ```
 
-## Local Development
+## FastAPI Service
 
-The simplest workflow is to run Python development commands from inside the Phase 1 directory:
+The project includes a working FastAPI service with:
 
-```powershell
-cd phase-01-foundation
+- Application metadata
+- Application factory
+- Versioned routing
+- Liveness and readiness probes
+- Pydantic request and response schemas
+- Validated prompt-request contracts
+- Environment-aware settings
+- Conditional OpenAPI and interactive documentation
+
+### Available Endpoints
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/` | Return configured service information |
+| `GET` | `/health/live` | Confirm that the application process is alive |
+| `GET` | `/health/ready` | Confirm that the API is ready to receive traffic |
+| `GET` | `/api/v1/status` | Return versioned runtime and environment information |
+| `POST` | `/api/v1/prompts/validate` | Validate and normalize a future model request |
+| `GET` | `/openapi.json` | Return the generated OpenAPI schema |
+| `GET` | `/docs` | Open Swagger UI |
+| `GET` | `/redoc` | Open ReDoc |
+
+The prompt-validation endpoint validates an inference contract but does not call a language model. External asynchronous model communication will be introduced in Commit 5.
+
+## Pydantic API Contracts
+
+The shared API schema configuration:
+
+- Rejects undeclared fields
+- Strips surrounding whitespace from strings
+- Applies reusable string and numeric constraints
+- Generates JSON Schema metadata for OpenAPI
+- Validates response structures before serialization
+
+Current models include:
+
+| Model | Purpose |
+|---|---|
+| `ServiceInformation` | Root service metadata |
+| `HealthResponse` | Liveness and readiness responses |
+| `ApiStatusResponse` | Versioned runtime status |
+| `PromptRequest` | Validated future inference request |
+| `PromptValidationResponse` | Normalized validation result |
+
+### Prompt Constraints
+
+The `PromptRequest` model currently validates:
+
+- Non-empty prompt text
+- Prompt length up to 4,000 characters
+- Optional system prompt up to 2,000 characters
+- Model identifier syntax
+- Temperature between `0.0` and `2.0`
+- Maximum token count between `1` and `4096`
+- No more than eight stop sequences
+- Unique normalized stop sequences
+- Rejection of undeclared request fields
+
+### Prompt Validation Example
+
+Start the service and submit:
+
+```bash
+curl -s \
+  -X POST \
+  http://127.0.0.1:8000/api/v1/prompts/validate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "  Explain GPU memory allocation for LLM inference.  ",
+    "model_id": "qwen2.5:3b",
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "stop_sequences": ["END"]
+  }'
 ```
 
-### Run Ruff linting
+Expected response:
 
-```powershell
-uv run ruff check .
+```json
+{
+  "valid": true,
+  "request": {
+    "prompt": "Explain GPU memory allocation for LLM inference.",
+    "model_id": "qwen2.5:3b",
+    "system_prompt": null,
+    "temperature": 0.2,
+    "max_tokens": 512,
+    "stop_sequences": [
+      "END"
+    ]
+  }
+}
 ```
 
-Automatically apply safe lint fixes:
+Invalid requests receive an HTTP `422` validation response.
 
-```powershell
-uv run ruff check --fix .
+## Application Configuration
+
+Runtime settings are defined in:
+
+```text
+src/applied_genai/core/config.py
 ```
 
-### Run Ruff formatting
+A safe configuration template is provided in:
 
-Apply formatting:
+```text
+.env.example
+```
 
-```powershell
+Supported settings include:
+
+- Application name and version
+- Deployment environment
+- Debug behavior
+- Intended host and port
+- API documentation availability
+- Intended log level
+
+Read the full reference:
+
+[Application Configuration](docs/configuration.md)
+
+## Run the Development Server
+
+From `phase-01-foundation`:
+
+```bash
+uv run uvicorn applied_genai.main:app \
+  --host 127.0.0.1 \
+  --port 8000 \
+  --reload
+```
+
+Open:
+
+```text
+Swagger UI: http://127.0.0.1:8000/docs
+ReDoc:      http://127.0.0.1:8000/redoc
+OpenAPI:    http://127.0.0.1:8000/openapi.json
+```
+
+The reload option is intended for local development and is not the final production process strategy.
+
+## Local Quality Commands
+
+Run these commands from `phase-01-foundation`.
+
+### Synchronize Dependencies
+
+```bash
+uv sync --locked
+```
+
+### Apply Formatting
+
+```bash
 uv run ruff format .
 ```
 
-Verify formatting without changing files:
+### Run Linting
 
-```powershell
+```bash
+uv run ruff check .
+```
+
+### Verify Formatting
+
+```bash
 uv run ruff format --check .
 ```
 
-### Run MyPy
+### Run Static Type Checking
 
-```powershell
+```bash
 uv run mypy
 ```
 
-### Run pytest and coverage
+### Run Tests and Coverage
 
-```powershell
+```bash
 uv run pytest
 ```
 
-### Build the Python package
+### Build the Package
 
-```powershell
+```bash
 uv build
 ```
 
-Generated distributions are placed under:
+Build artifacts are written to `dist/` and are not committed.
 
-```text
-dist/
+## Repository-Level Pre-commit Gate
+
+From the repository root:
+
+```bash
+uv run --project phase-01-foundation \
+  pre-commit run --all-files
 ```
 
-The `dist/` directory is a generated build artifact and is not committed to Git.
-
-## Repository-Root Commands
-
-The repository uses a multi-phase layout. Running `uv` with `--project` selects the Phase 1 environment, but it does not change the command's working directory.
-
-From the repository root, use explicit configuration and target paths.
-
-### Ruff
-
-```powershell
-uv run --project phase-01-foundation ruff check phase-01-foundation
-uv run --project phase-01-foundation ruff format --check phase-01-foundation
-```
-
-### MyPy
-
-```powershell
-uv run --project phase-01-foundation mypy `
-  --config-file phase-01-foundation/pyproject.toml `
-  phase-01-foundation/src `
-  phase-01-foundation/tests
-```
-
-### pytest
-
-```powershell
-uv run --project phase-01-foundation pytest `
-  -c phase-01-foundation/pyproject.toml `
-  phase-01-foundation/tests
-```
-
-### Pre-commit
-
-```powershell
-uv run --project phase-01-foundation pre-commit run --all-files
-```
-
-## Pre-commit Quality Gates
-
-The repository-level `.pre-commit-config.yaml` currently validates Phase 1 with:
+Configured hooks currently run:
 
 - Ruff linting
-- Ruff formatting
-- MyPy static type checking
+- Ruff formatting verification
+- MyPy strict type checking
 
-Install the Git hook from the repository root:
+## Testing
 
-```powershell
-uv run --project phase-01-foundation pre-commit install
-```
+The automated suite validates:
 
-Run all hooks manually:
+- Package metadata
+- Application construction
+- FastAPI metadata
+- OpenAPI, Swagger UI, and ReDoc
+- Liveness and readiness endpoints
+- Versioned status responses
+- Pydantic system schemas
+- Pydantic prompt schemas
+- Valid and invalid prompt requests
+- Environment-variable settings
+- Settings defaults and constraints
+- Settings caching
+- Application-factory settings integration
+- FastAPI dependency overrides
+- Conditional documentation endpoints
+- Unknown-route behavior
 
-```powershell
-uv run --project phase-01-foundation pre-commit run --all-files
-```
-
-Expected result:
+The configured minimum coverage threshold is:
 
 ```text
-Phase 1 - Ruff lint........................................Passed
-Phase 1 - Ruff format......................................Passed
-Phase 1 - MyPy type check..................................Passed
+80%
 ```
 
-## Current Package Interface
+The current suite exceeds this requirement.
 
-The initial package exposes basic project metadata:
+## Package Interface
+
+The package exposes basic project metadata:
 
 ```python
 from applied_genai import __version__, project_name
@@ -249,87 +399,8 @@ Expected output:
 Applied GenAI Foundation
 ```
 
-This minimal package provides a valid target for packaging, linting, type checking, and automated tests before the FastAPI application is introduced.
-
-## FastAPI Service
-
-Phase 1 now includes a working FastAPI service with application metadata, health probes, versioned routing, and generated API documentation.
-
-### Available Endpoints
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET | `/` | Return service information |
-| GET | `/health/live` | Confirm that the application process is alive |
-| GET | `/health/ready` | Confirm that the API is ready to receive traffic |
-| GET | `/api/v1/status` | Return versioned API operational information |
-| GET | `/openapi.json` | Return the generated OpenAPI schema |
-| GET | `/docs` | Open Swagger UI |
-| GET | `/redoc` | Open ReDoc |
-
-### Run the Development Server
-
-From `phase-01-foundation`:
-
-```powershell
-uv run uvicorn applied_genai.main:app --host 127.0.0.1 --port 8000 --reload
-```
-
-Open the Swagger documentation:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-Open the ReDoc documentation:
-
-```text
-http://127.0.0.1:8000/redoc
-```
-
-The development server uses automatic reload and should not be treated as the final production process configuration.
-
-## Testing and Coverage
-
-The initial tests validate:
-
-- The package version
-- The human-readable project name
-
-The configured minimum test coverage is:
-
-```text
-80%
-```
-
-Run the complete test suite:
-
-```powershell
-uv run pytest
-```
-
-## Commit 2 Completion Gate
-
-Commit 2 is ready to complete when all commands below pass from inside `phase-01-foundation`:
-
-```powershell
-uv sync --locked
-uv run ruff check .
-uv run ruff format --check .
-uv run mypy
-uv run pytest
-uv build
-```
-
-Then run the repository-level pre-commit checks:
-
-```powershell
-cd ..
-uv run --project phase-01-foundation pre-commit run --all-files
-```
-
 ## Status
 
-Commits 1 through 3 are complete.
+Commits 1 through 4 are complete.
 
-The project now includes a reproducible Python development environment, automated code-quality controls, package validation, and a tested FastAPI service with health probes, versioned routing, and OpenAPI documentation.
+The project now includes a reproducible Python environment, automated quality controls, a packaged FastAPI service, versioned API routes, health probes, strict Pydantic request and response contracts, validated application settings, environment-aware application construction, dependency injection, and generated OpenAPI documentation.

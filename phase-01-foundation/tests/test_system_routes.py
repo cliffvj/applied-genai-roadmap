@@ -9,7 +9,7 @@ client = TestClient(app)
 
 
 def test_service_information() -> None:
-    """The root endpoint should return service information."""
+    """The root endpoint should return configured service information."""
     response = client.get("/")
 
     assert response.status_code == 200
@@ -26,7 +26,9 @@ def test_liveness() -> None:
     response = client.get("/health/live")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "healthy"}
+    assert response.json() == {
+        "status": "healthy",
+    }
 
 
 def test_readiness() -> None:
@@ -34,11 +36,13 @@ def test_readiness() -> None:
     response = client.get("/health/ready")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ready"}
+    assert response.json() == {
+        "status": "ready",
+    }
 
 
 def test_api_v1_status() -> None:
-    """The versioned status endpoint should report API metadata."""
+    """The versioned status endpoint should report runtime metadata."""
     response = client.get("/api/v1/status")
 
     assert response.status_code == 200
@@ -47,6 +51,9 @@ def test_api_v1_status() -> None:
         "service": project_name(),
         "version": __version__,
         "status": "operational",
+        "environment": "development",
+        "debug": False,
+        "documentation_enabled": True,
     }
 
 
@@ -55,4 +62,6 @@ def test_unknown_route_returns_not_found() -> None:
     response = client.get("/api/v1/unknown")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {
+        "detail": "Not Found",
+    }
