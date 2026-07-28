@@ -1,4 +1,4 @@
-"""Tests for service information and health-check routes."""
+"""Tests for service information and lightweight system routes."""
 
 from fastapi.testclient import TestClient
 
@@ -22,22 +22,12 @@ def test_service_information() -> None:
 
 
 def test_liveness() -> None:
-    """The liveness endpoint should report a healthy process."""
+    """Liveness should report that the running process is healthy."""
     response = client.get("/health/live")
 
     assert response.status_code == 200
     assert response.json() == {
         "status": "healthy",
-    }
-
-
-def test_readiness() -> None:
-    """The readiness endpoint should report that the API is ready."""
-    response = client.get("/health/ready")
-
-    assert response.status_code == 200
-    assert response.json() == {
-        "status": "ready",
     }
 
 

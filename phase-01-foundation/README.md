@@ -25,7 +25,7 @@ By completing this phase, the project will demonstrate the ability to:
 | 2 | Python tooling and dependency management | Complete |
 | 3 | FastAPI application and REST endpoints | Complete |
 | 4 | Pydantic models and application configuration | Complete |
-| 5 | Async operations and external service client | Planned |
+| 5 | Async operations and external service client | Complete |
 | 6 | Automated testing and quality controls | Planned |
 | 7 | Containerization and health checks | Planned |
 | 8 | GitHub Actions, documentation, and release | Planned |
@@ -49,34 +49,50 @@ Later phases will extend this service to support:
 ```text
 phase-01-foundation/
 ├── docs/
-│   └── configuration.md
+│   ├── configuration.md
+│   └── model-service-integration.md
 ├── scripts/
+│   └── mock_model_service.py
 ├── src/
 │   └── applied_genai/
 │       ├── __init__.py
 │       ├── main.py
 │       ├── api/
 │       │   ├── __init__.py
+│       │   ├── dependencies.py
 │       │   ├── router.py
 │       │   └── routes/
 │       │       ├── __init__.py
+│       │       ├── model_service.py
 │       │       ├── prompts.py
 │       │       └── system.py
+│       ├── clients/
+│       │   ├── __init__.py
+│       │   ├── errors.py
+│       │   └── model_service.py
 │       ├── core/
 │       │   ├── __init__.py
 │       │   └── config.py
 │       └── schemas/
 │           ├── __init__.py
 │           ├── base.py
+│           ├── external.py
 │           ├── prompt.py
 │           └── system.py
 ├── tests/
 │   ├── __init__.py
 │   ├── test_config.py
+│   ├── test_external_schemas.py
 │   ├── test_main.py
+│   ├── test_model_service_client.py
+│   ├── test_model_service_generation.py
+│   ├── test_model_service_lifespan.py
+│   ├── test_model_service_routes.py
 │   ├── test_package.py
+│   ├── test_prompt_generation_routes.py
 │   ├── test_prompt_routes.py
 │   ├── test_prompt_schemas.py
+│   └── test_readiness_routes.py
 │   ├── test_settings_integration.py
 │   ├── test_system_routes.py
 │   └── test_system_schemas.py
@@ -104,9 +120,10 @@ Generated directories such as `.venv`, `dist`, `htmlcov`, and Python tool caches
 | MyPy | Strict static type checking |
 | pytest | Automated test execution |
 | pytest-cov | Test coverage measurement |
-| httpx2 | Test-client HTTP transport |
+| httpx2 | Asynchronous HTTP client, timeouts, connection pooling, and mock transports |
 | pre-commit | Automated local quality checks before Git commits |
 | Hatchling | Python package build backend |
+| Tenacity | Bounded asynchronous retries and exponential backoff |
 
 ## Python Environment
 
@@ -160,9 +177,11 @@ The project includes a working FastAPI service with:
 |---|---|---|
 | `GET` | `/` | Return configured service information |
 | `GET` | `/health/live` | Confirm that the application process is alive |
-| `GET` | `/health/ready` | Confirm that the API is ready to receive traffic |
+| `GET` | `/health/ready` | Evaluate readiness and required external dependencies |
 | `GET` | `/api/v1/status` | Return versioned runtime and environment information |
-| `POST` | `/api/v1/prompts/validate` | Validate and normalize a future model request |
+| `GET` | `/api/v1/model-service/status` | Check the configured external model service |
+| `POST` | `/api/v1/prompts/validate` | Validate and normalize a model request |
+| `POST` | `/api/v1/prompts/generate` | Submit a prompt to the external model service |
 | `GET` | `/openapi.json` | Return the generated OpenAPI schema |
 | `GET` | `/docs` | Open Swagger UI |
 | `GET` | `/redoc` | Open ReDoc |
@@ -240,6 +259,64 @@ Expected response:
 ```
 
 Invalid requests receive an HTTP `422` validation response.
+
+## Asynchronous Model-Service Integration
+
+The API now includes an asynchronous client for a separately deployed model service.
+
+The integration provides:
+
+- A shared lifespan-managed HTTP client
+- Connection pooling
+- Validated model-service health responses
+- Validated prompt-generation responses
+- Strict operation timeouts
+- Bounded retries with exponential backoff
+- Transient and non-transient failure classification
+- Dependency injection into FastAPI routes
+- Dependency-aware readiness
+- Public HTTP `502` and `503` error mapping
+- Deterministic mock-transport tests
+- A local mock model service
+
+### Readiness Behavior
+
+Liveness remains independent from external services:
+
+```text
+GET /health/live
+```
+
+Readiness can require the model service:
+
+```text
+GET /health/ready
+```
+
+When the upstream service is required but unavailable, readiness returns HTTP `503` without causing the liveness probe to fail.
+
+### Local Mock Model Service
+
+Start the mock service:
+
+```bash
+uv run uvicorn scripts.mock_model_service:app \
+  --host 127.0.0.1 \
+  --port 8001
+```
+
+Start the main API in another terminal:
+
+```bash
+uv run uvicorn applied_genai.main:app \
+  --host 127.0.0.1 \
+  --port 8000 \
+  --reload
+```
+
+Read the full implementation and operational guide:
+
+[Asynchronous Model-Service Integration](docs/model-service-integration.md)
 
 ## Application Configuration
 
@@ -372,6 +449,19 @@ The automated suite validates:
 - FastAPI dependency overrides
 - Conditional documentation endpoints
 - Unknown-route behavior
+- Asynchronous client success and failure behavior
+- Retry handling for transient HTTP responses
+- Non-retryable upstream responses
+- Malformed JSON and invalid upstream schemas
+- FastAPI lifespan startup and shutdown
+- Shared-client cleanup
+- Model-service status routing
+- Dependency-aware readiness
+- Optional-dependency readiness
+- Prompt-generation request forwarding
+- Prompt-generation response transformation
+- Public HTTP `502` and `503` error mapping
+- Local mock-service contracts
 
 The configured minimum coverage threshold is:
 
@@ -401,6 +491,6 @@ Applied GenAI Foundation
 
 ## Status
 
-Commits 1 through 4 are complete.
+Commits 1 through 5 are complete.
 
-The project now includes a reproducible Python environment, automated quality controls, a packaged FastAPI service, versioned API routes, health probes, strict Pydantic request and response contracts, validated application settings, environment-aware application construction, dependency injection, and generated OpenAPI documentation.
+The project now includes a reproducible Python environment, automated quality controls, a packaged FastAPI service, strict Pydantic contracts, validated application settings, asynchronous external-service communication, bounded retries, connection pooling, FastAPI lifespan management, dependency-aware readiness, model-service health integration, and validated prompt generation.

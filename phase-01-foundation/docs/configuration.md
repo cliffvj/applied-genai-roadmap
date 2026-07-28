@@ -43,6 +43,14 @@ APPLIED_GENAI_
 | `APPLIED_GENAI_PORT` | Integer | `8000` | 1–65535 | Intended network listener port |
 | `APPLIED_GENAI_DOCS_ENABLED` | Boolean | `true` | Boolean value | Enable OpenAPI, Swagger UI, and ReDoc |
 | `APPLIED_GENAI_LOG_LEVEL` | String | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL` | Intended application logging level |
+| `APPLIED_GENAI_MODEL_SERVICE_BASE_URL` | URL string | `http://127.0.0.1:8001` | HTTP or HTTPS URL | External model-service base URL |
+| `APPLIED_GENAI_MODEL_SERVICE_HEALTH_PATH` | String | `/health` | Must begin with `/` | External health-check path |
+| `APPLIED_GENAI_MODEL_SERVICE_GENERATE_PATH` | String | `/generate` | Must begin with `/` | External prompt-generation path |
+| `APPLIED_GENAI_MODEL_SERVICE_REQUIRED_FOR_READINESS` | Boolean | `true` | Boolean value | Determine whether upstream availability blocks readiness |
+| `APPLIED_GENAI_MODEL_SERVICE_TIMEOUT_SECONDS` | Float | `10` | Greater than `0`, maximum `120` | External HTTP operation timeout |
+| `APPLIED_GENAI_MODEL_SERVICE_RETRY_ATTEMPTS` | Integer | `3` | Between `1` and `5` | Maximum attempts for transient failures |
+| `APPLIED_GENAI_MODEL_SERVICE_RETRY_MIN_WAIT_SECONDS` | Float | `0.25` | Between `0` and `10` | Minimum retry delay |
+| `APPLIED_GENAI_MODEL_SERVICE_RETRY_MAX_WAIT_SECONDS` | Float | `2` | Between `0` and `30` | Maximum retry delay |
 
 ## Local `.env` Configuration
 
@@ -63,6 +71,14 @@ APPLIED_GENAI_HOST=127.0.0.1
 APPLIED_GENAI_PORT=8000
 APPLIED_GENAI_DOCS_ENABLED=true
 APPLIED_GENAI_LOG_LEVEL=DEBUG
+APPLIED_GENAI_MODEL_SERVICE_BASE_URL=http://127.0.0.1:8001
+APPLIED_GENAI_MODEL_SERVICE_HEALTH_PATH=/health
+APPLIED_GENAI_MODEL_SERVICE_GENERATE_PATH=/generate
+APPLIED_GENAI_MODEL_SERVICE_REQUIRED_FOR_READINESS=true
+APPLIED_GENAI_MODEL_SERVICE_TIMEOUT_SECONDS=10
+APPLIED_GENAI_MODEL_SERVICE_RETRY_ATTEMPTS=3
+APPLIED_GENAI_MODEL_SERVICE_RETRY_MIN_WAIT_SECONDS=0.25
+APPLIED_GENAI_MODEL_SERVICE_RETRY_MAX_WAIT_SECONDS=2
 ```
 
 The real `.env` file is ignored by Git and must not be committed.
@@ -218,6 +234,55 @@ uv run uvicorn applied_genai.main:app \
 ```
 
 A later phase can introduce a launch wrapper or container entrypoint that consumes these settings directly.
+
+## External Model-Service Settings
+
+The API communicates with a separately configured model-service endpoint.
+
+The default local development target is:
+
+```text
+http://127.0.0.1:8001
+```
+
+The health and generation operations use:
+
+```text
+GET  /health
+POST /generate
+```
+
+The complete URLs are constructed from the configured base URL and relative operation paths.
+
+### Readiness Requirement
+
+When:
+
+```dotenv
+APPLIED_GENAI_MODEL_SERVICE_REQUIRED_FOR_READINESS=true
+```
+
+the readiness endpoint contacts the configured model service.
+
+A failed dependency check produces HTTP `503` and prevents the API from being considered ready for application traffic.
+
+When the setting is `false`, the API can become ready without contacting the model service. This can be useful during local API development or when the model backend is optional.
+
+### Timeout and Retries
+
+The external HTTP client applies:
+
+- A bounded operation timeout
+- A maximum retry-attempt count
+- Exponential retry backoff
+- Minimum and maximum retry delays
+- Retries only for transport errors and selected transient HTTP statuses
+
+The maximum retry delay must not be lower than the minimum retry delay.
+
+Read the complete integration guide:
+
+[Asynchronous Model-Service Integration](model-service-integration.md)
 
 ## Security Guidelines
 

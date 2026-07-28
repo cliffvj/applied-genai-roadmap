@@ -66,7 +66,7 @@ This roadmap is designed to develop demonstrable competencies for roles such as:
 
 [Phase 1 — Foundation](phase-01-foundation/README.md)
 
-Current progress: Commits 1–4 are complete. The project now includes the Python toolchain, FastAPI service, Pydantic API contracts, prompt validation, and environment-based application configuration.
+Current progress: Commits 1–5 are complete. The project now includes the Python toolchain, FastAPI service, Pydantic contracts, environment-based configuration, asynchronous model-service communication, retries, lifespan resource management, dependency-aware readiness, and validated prompt generation.
 
 ## Author
 

@@ -48,7 +48,45 @@ class HealthStatus(StrEnum):
     """Supported application health states."""
 
     HEALTHY = "healthy"
+
+
+class ReadinessStatus(StrEnum):
+    """Supported application readiness states."""
+
     READY = "ready"
+    NOT_READY = "not_ready"
+
+
+class DependencyReadinessStatus(StrEnum):
+    """Supported readiness states for an external dependency."""
+
+    HEALTHY = "healthy"
+    UNAVAILABLE = "unavailable"
+    NOT_REQUIRED = "not_required"
+
+
+class ModelServiceReadiness(ApiSchema):
+    """Readiness information for the external model service."""
+
+    required: bool = Field(
+        description=(
+            "Whether external model-service availability is required for application readiness."
+        ),
+    )
+    status: DependencyReadinessStatus = Field(
+        description="Current readiness state of the model-service dependency.",
+    )
+
+
+class ReadinessResponse(ApiSchema):
+    """Response returned by the application readiness probe."""
+
+    status: ReadinessStatus = Field(
+        description="Current readiness state of the API.",
+    )
+    model_service: ModelServiceReadiness = Field(
+        description="Readiness state of the external model-service dependency.",
+    )
 
 
 class ServiceInformation(ApiSchema):
@@ -75,7 +113,7 @@ class ServiceInformation(ApiSchema):
 
 
 class HealthResponse(ApiSchema):
-    """Response returned by liveness and readiness probes."""
+    """Response returned by the liveness probe."""
 
     status: HealthStatus = Field(
         description="Current application health state.",

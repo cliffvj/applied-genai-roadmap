@@ -3,7 +3,12 @@
 import pytest
 from pydantic import ValidationError
 
-from applied_genai.schemas.prompt import PromptRequest
+from applied_genai.schemas.prompt import (
+    GenerationFinishReason,
+    PromptGenerationResponse,
+    PromptRequest,
+    TokenUsage,
+)
 
 
 def test_prompt_request_defaults() -> None:
@@ -99,3 +104,53 @@ def test_prompt_request_rejects_unknown_fields() -> None:
                 "unsupported_parameter": True,
             },
         )
+
+
+def test_token_usage_serialization() -> None:
+    """Token usage should serialize with a consistent total."""
+    usage = TokenUsage(
+        prompt_tokens=10,
+        completion_tokens=15,
+        total_tokens=25,
+    )
+
+    assert usage.model_dump() == {
+        "prompt_tokens": 10,
+        "completion_tokens": 15,
+        "total_tokens": 25,
+    }
+
+
+def test_token_usage_rejects_incorrect_total() -> None:
+    """A total inconsistent with its components should be rejected."""
+    with pytest.raises(ValidationError):
+        TokenUsage(
+            prompt_tokens=10,
+            completion_tokens=15,
+            total_tokens=30,
+        )
+
+
+def test_prompt_generation_response_serialization() -> None:
+    """A generated response should serialize to the public contract."""
+    response = PromptGenerationResponse(
+        model_id="qwen2.5:3b",
+        generated_text="Generated response.",
+        finish_reason=GenerationFinishReason.STOP,
+        usage=TokenUsage(
+            prompt_tokens=4,
+            completion_tokens=3,
+            total_tokens=7,
+        ),
+    )
+
+    assert response.model_dump(mode="json") == {
+        "model_id": "qwen2.5:3b",
+        "generated_text": "Generated response.",
+        "finish_reason": "stop",
+        "usage": {
+            "prompt_tokens": 4,
+            "completion_tokens": 3,
+            "total_tokens": 7,
+        },
+    }

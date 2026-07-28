@@ -5,8 +5,12 @@ from pydantic import ValidationError
 
 from applied_genai import __version__, project_name
 from applied_genai.schemas.system import (
+    DependencyReadinessStatus,
     HealthResponse,
     HealthStatus,
+    ModelServiceReadiness,
+    ReadinessResponse,
+    ReadinessStatus,
     ServiceInformation,
     ServiceStatus,
 )
@@ -56,19 +60,31 @@ def test_service_information_rejects_unknown_fields() -> None:
         )
 
 
-@pytest.mark.parametrize(
-    "health_status",
-    [
-        HealthStatus.HEALTHY,
-        HealthStatus.READY,
-    ],
-)
-def test_health_response_accepts_supported_states(
-    health_status: HealthStatus,
-) -> None:
-    """Health responses should accept only declared health states."""
-    response = HealthResponse(status=health_status)
+def test_health_response_accepts_healthy_state() -> None:
+    """The liveness response should accept the healthy state."""
+    response = HealthResponse(
+        status=HealthStatus.HEALTHY,
+    )
 
     assert response.model_dump(mode="json") == {
-        "status": health_status.value,
+        "status": "healthy",
+    }
+
+
+def test_readiness_response_serialization() -> None:
+    """Readiness information should serialize to a stable API contract."""
+    response = ReadinessResponse(
+        status=ReadinessStatus.READY,
+        model_service=ModelServiceReadiness(
+            required=True,
+            status=DependencyReadinessStatus.HEALTHY,
+        ),
+    )
+
+    assert response.model_dump(mode="json") == {
+        "status": "ready",
+        "model_service": {
+            "required": True,
+            "status": "healthy",
+        },
     }
