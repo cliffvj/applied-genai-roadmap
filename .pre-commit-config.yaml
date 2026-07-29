@@ -24,4 +24,16 @@ repos:
         pass_filenames: false
         require_serial: true
 
+      - id: phase1-pytest-fast
+        name: Phase 1 - Pytest fast suite
+        entry: >-
+          uv run --project phase-01-foundation --locked
+          python phase-01-foundation/scripts/test_runner.py fast
+        language: system
+        pass_filenames: false
+        files: >-
+          ^(\.pre-commit-config\.yaml|
+          phase-01-foundation/(pyproject\.toml|uv\.lock|
+          src/.*|tests/.*|scripts/.*))$
+
         

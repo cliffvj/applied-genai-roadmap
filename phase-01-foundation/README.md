@@ -26,7 +26,7 @@ By completing this phase, the project will demonstrate the ability to:
 | 3 | FastAPI application and REST endpoints | Complete |
 | 4 | Pydantic models and application configuration | Complete |
 | 5 | Async operations and external service client | Complete |
-| 6 | Automated testing and quality controls | Planned |
+| 6 | Automated testing and quality controls | Complete |
 | 7 | Containerization and health checks | Planned |
 | 8 | GitHub Actions, documentation, and release | Planned |
 
@@ -51,8 +51,10 @@ phase-01-foundation/
 ├── docs/
 │   ├── configuration.md
 │   └── model-service-integration.md
+│   └── testing.md
 ├── scripts/
 │   └── mock_model_service.py
+│   └── test_runner.py
 ├── src/
 │   └── applied_genai/
 │       ├── __init__.py
@@ -124,6 +126,9 @@ Generated directories such as `.venv`, `dist`, `htmlcov`, and Python tool caches
 | pre-commit | Automated local quality checks before Git commits |
 | Hatchling | Python package build backend |
 | Tenacity | Bounded asynchronous retries and exponential backoff |
+| Hypothesis | Property-based and generated boundary testing |
+| pytest-xdist | Deterministic parallel test execution |
+| pytest-timeout | Per-test and full-session timeout protection |
 
 ## Python Environment
 
@@ -489,8 +494,46 @@ Expected output:
 Applied GenAI Foundation
 ```
 
+## Automated Test Profiles
+
+The project provides repeatable cross-platform test profiles.
+
+### Fast Development Suite
+
+```bash
+uv run python scripts/test_runner.py fast
+```
+
+This excludes property-based and slow tests and does not enforce project-wide coverage.
+
+### Full Serial Suite
+
+```bash
+uv run python scripts/test_runner.py full
+```
+
+This runs all tests, property checks, branch coverage, and the 95% coverage gate.
+
+### Full Parallel Suite
+
+```bash
+uv run python scripts/test_runner.py parallel
+```
+
+This runs the complete suite through two deterministic pytest-xdist workers.
+
+### Cleanup
+
+```bash
+uv run python scripts/test_runner.py clean
+```
+
+Read the complete guide:
+
+[Automated Testing and Quality Controls](docs/testing.md)
+
 ## Status
 
-Commits 1 through 5 are complete.
+Commits 1 through 6 are complete.
 
-The project now includes a reproducible Python environment, automated quality controls, a packaged FastAPI service, strict Pydantic contracts, validated application settings, asynchronous external-service communication, bounded retries, connection pooling, FastAPI lifespan management, dependency-aware readiness, model-service health integration, and validated prompt generation.
+The project now includes a reproducible Python environment, automated formatting and linting, strict static typing, a packaged FastAPI service, validated Pydantic contracts, environment-based configuration, asynchronous external-service integration, dependency-aware readiness, prompt generation, centrally classified tests, deterministic test factories, property-based testing, parallel execution, timeout protection, branch coverage, a 95% coverage gate, and a fast pre-commit test suite.
