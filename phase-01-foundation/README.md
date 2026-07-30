@@ -27,7 +27,7 @@ By completing this phase, the project will demonstrate the ability to:
 | 4 | Pydantic models and application configuration | Complete |
 | 5 | Async operations and external service client | Complete |
 | 6 | Automated testing and quality controls | Complete |
-| 7 | Containerization and health checks | Planned |
+| 7 | Containerization and health checks | Complete |
 | 8 | GitHub Actions, documentation, and release | Planned |
 
 ## Planned Application
@@ -50,9 +50,11 @@ Later phases will extend this service to support:
 phase-01-foundation/
 ├── docs/
 │   ├── configuration.md
+│   ├── containerization.md
 │   └── model-service-integration.md
 │   └── testing.md
 ├── scripts/
+│   ├── container_smoke_test.py
 │   └── mock_model_service.py
 │   └── test_runner.py
 ├── src/
@@ -83,7 +85,12 @@ phase-01-foundation/
 │           └── system.py
 ├── tests/
 │   ├── __init__.py
+│   ├── conftest.py
+│   ├── factories.py
+│   ├── test_compose_files.py
 │   ├── test_config.py
+│   ├── test_container_files.py
+│   └── test_container_smoke_script.py
 │   ├── test_external_schemas.py
 │   ├── test_main.py
 │   ├── test_model_service_client.py
@@ -98,8 +105,11 @@ phase-01-foundation/
 │   ├── test_settings_integration.py
 │   ├── test_system_routes.py
 │   └── test_system_schemas.py
+├── .dockerignore
 ├── .env.example
 ├── .python-version
+├── compose.yaml
+├── Dockerfile
 ├── pyproject.toml
 ├── README.md
 └── uv.lock
@@ -129,6 +139,9 @@ Generated directories such as `.venv`, `dist`, `htmlcov`, and Python tool caches
 | Hypothesis | Property-based and generated boundary testing |
 | pytest-xdist | Deterministic parallel test execution |
 | pytest-timeout | Per-test and full-session timeout protection |
+| Docker | Build and run the production application image |
+| Docker Compose | Run the API and mock model service as a hardened local stack |
+| Docker BuildKit | Provide multi-stage builds, cache mounts, and build validation |
 
 ## Python Environment
 
@@ -467,6 +480,19 @@ The automated suite validates:
 - Prompt-generation response transformation
 - Public HTTP `502` and `503` error mapping
 - Local mock-service contracts
+- Dockerfile contract validation
+- `.dockerignore` security validation
+- Docker Compose contract validation
+- Non-root runtime verification
+- Read-only filesystem verification
+- Linux capability and privilege controls
+- Resource-limit verification
+- Container liveness and readiness
+- Internal service DNS validation
+- Dependency failure simulation
+- Container health-state transitions
+- Automatic dependency recovery verification
+- End-to-end generation after recovery
 
 The configured minimum coverage threshold is:
 
@@ -493,6 +519,68 @@ Expected output:
 0.1.0
 Applied GenAI Foundation
 ```
+
+## Hardened Container Deployment
+
+The Phase 1 application can run as a hardened two-service Docker Compose stack.
+
+The stack includes:
+
+- A production FastAPI API image
+- A separate mock model-service image
+- Locked runtime dependencies
+- Non-root UID and GID
+- Read-only root filesystems
+- Ephemeral writable `/tmp`
+- Dropped Linux capabilities
+- Prevention of privilege escalation
+- CPU, memory, and PID guardrails
+- Bounded Docker log rotation
+- Internal Compose service discovery
+- Health-based startup ordering
+- Dependency-aware API readiness
+- Automated failure and recovery testing
+
+### Build the Images
+
+```bash
+docker compose build --pull
+```
+
+### Start the Stack
+
+```bash
+docker compose up \
+  --detach \
+  --wait \
+  --wait-timeout 120
+```
+
+The API is available at:
+
+```text
+http://127.0.0.1:8000
+```
+
+The mock model service remains internal to the Compose network.
+
+### Run the Automated Recovery Drill
+
+```bash
+uv run python \
+  scripts/container_smoke_test.py \
+  --build
+```
+
+### Stop the Stack
+
+```bash
+docker compose down --remove-orphans
+```
+
+Read the complete deployment and security guide:
+
+[Hardened Container Deployment](docs/containerization.md)
 
 ## Automated Test Profiles
 
@@ -534,6 +622,6 @@ Read the complete guide:
 
 ## Status
 
-Commits 1 through 6 are complete.
+Commits 1 through 7 are complete.
 
-The project now includes a reproducible Python environment, automated formatting and linting, strict static typing, a packaged FastAPI service, validated Pydantic contracts, environment-based configuration, asynchronous external-service integration, dependency-aware readiness, prompt generation, centrally classified tests, deterministic test factories, property-based testing, parallel execution, timeout protection, branch coverage, a 95% coverage gate, and a fast pre-commit test suite.
+The project now includes a reproducible Python environment, automated formatting and linting, strict static typing, a packaged FastAPI service, validated Pydantic contracts, environment-based configuration, asynchronous external-service integration, dependency-aware readiness, validated prompt generation, centrally classified tests, deterministic test factories, property-based testing, parallel execution, timeout protection, branch coverage, a 95% coverage gate, a fast pre-commit suite, multi-stage container builds, non-root runtime images, hardened Docker Compose services, container health checks, resource guardrails, automated dependency-failure testing, and recovery verification.

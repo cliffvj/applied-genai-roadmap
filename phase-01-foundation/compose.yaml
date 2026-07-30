@@ -1,0 +1,117 @@
+name: applied-genai-foundation
+
+services:
+  mock-model-service:
+    image: applied-genai-mock-model-service:0.1.0
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: mock
+      args:
+        APP_VERSION: "0.1.0"
+    environment:
+      UVICORN_HOST: 0.0.0.0
+      UVICORN_PORT: "8001"
+      UVICORN_LOG_LEVEL: info
+    expose:
+      - "8001"
+
+    # Runtime hardening
+    user: "10001:10001"
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777,uid=10001,gid=10001
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+    # Local development resource guardrails
+    pids_limit: 64
+    mem_limit: 256m
+    cpus: 0.5
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    networks:
+      - model-network
+    stop_grace_period: 10s
+
+  api:
+    image: applied-genai-foundation:0.1.0
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        APP_VERSION: "0.1.0"
+    environment:
+      APPLIED_GENAI_ENVIRONMENT: development
+      APPLIED_GENAI_DOCS_ENABLED: "true"
+      APPLIED_GENAI_LOG_LEVEL: INFO
+      APPLIED_GENAI_MODEL_SERVICE_BASE_URL: http://mock-model-service:8001
+      APPLIED_GENAI_MODEL_SERVICE_REQUIRED_FOR_READINESS: "true"
+      APPLIED_GENAI_MODEL_SERVICE_TIMEOUT_SECONDS: "1.0"
+      APPLIED_GENAI_MODEL_SERVICE_RETRY_ATTEMPTS: "2"
+      APPLIED_GENAI_MODEL_SERVICE_RETRY_MIN_WAIT_SECONDS: "0.1"
+      APPLIED_GENAI_MODEL_SERVICE_RETRY_MAX_WAIT_SECONDS: "0.25"
+      UVICORN_HOST: 0.0.0.0
+      UVICORN_PORT: "8000"
+      UVICORN_LOG_LEVEL: info
+    depends_on:
+      mock-model-service:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+
+    # Runtime hardening
+    user: "10001:10001"
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777,uid=10001,gid=10001
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+    # Local development resource guardrails
+    pids_limit: 128
+    mem_limit: 512m
+    cpus: 1.0
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import json, urllib.request;
+          response = urllib.request.urlopen(
+          'http://127.0.0.1:8000/health/ready', timeout=2);
+          payload = json.load(response);
+          raise SystemExit(0 if response.status == 200 and
+          payload.get('status') == 'ready' else 1)
+      interval: 5s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+
+    networks:
+      - model-network
+    stop_grace_period: 10s
+
+networks:
+  model-network:
+    driver: bridge

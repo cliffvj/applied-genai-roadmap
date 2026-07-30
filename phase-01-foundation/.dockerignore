@@ -1,0 +1,57 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+.github/
+
+# Local Python environments
+.venv/
+venv/
+env/
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# Test and coverage output
+.coverage
+.coverage.*
+coverage.xml
+coverage.json
+coverage.lcov
+htmlcov/
+
+# Build output
+build/
+dist/
+*.egg-info/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Editor and operating-system files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Project content not required by the production image
+tests/
+docs/
+scripts/test_runner.py
+scripts/container_smoke_test.py
+compose*.yaml
+
+# Local logs and temporary files
+*.log
+tmp/
+temp/

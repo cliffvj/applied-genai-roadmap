@@ -24,7 +24,19 @@ PromptRequestFactory = Callable[..., PromptRequest]
 XDIST_AUTO_WORKERS = 2
 
 TEST_MODULE_MARKERS: dict[str, tuple[str, ...]] = {
+    "test_compose_files.py": (
+        "unit",
+        "contract",
+    ),
     "test_config.py": ("unit",),
+    "test_container_files.py": (
+        "unit",
+        "contract",
+    ),
+    "test_container_smoke_script.py": (
+        "unit",
+        "contract",
+    ),
     "test_external_contract_properties.py": (
         "unit",
         "contract",
