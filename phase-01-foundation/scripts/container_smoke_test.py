@@ -490,10 +490,13 @@ def validate_dependency_failure_and_recovery() -> None:
 
     run_compose(
         "start",
-        "--wait",
-        "--wait-timeout",
-        "120",
         "mock-model-service",
+    )
+
+    wait_for_container_health(
+        "mock-model-service",
+        "healthy",
+        timeout_seconds=120,
     )
 
     wait_for_json_response(

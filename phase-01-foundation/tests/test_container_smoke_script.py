@@ -70,3 +70,13 @@ def test_smoke_script_handles_http_timeouts() -> None:
     assert "HTTP_REQUEST_TIMEOUT_SECONDS" in script
     assert "except TimeoutError as exc:" in script
     assert "timed out after" in script
+
+
+def test_smoke_script_uses_portable_dependency_restart() -> None:
+    """Dependency recovery should not require start-specific wait flags."""
+    script = read_smoke_script()
+
+    assert '"start",' in script
+    assert '"mock-model-service",' in script
+    assert 'wait_for_container_health(\n        "mock-model-service",\n        "healthy",' in script
+    assert '"start",\n        "--wait",' not in script
