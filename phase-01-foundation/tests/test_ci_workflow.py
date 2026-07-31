@@ -53,7 +53,7 @@ def test_ci_workflow_uses_current_action_majors() -> None:
 
     assert "uses: actions/checkout@v7" in workflow
     assert "uses: actions/setup-python@v6" in workflow
-    assert "uses: astral-sh/setup-uv@v9" in workflow
+    assert "uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0" in workflow
     assert (
         workflow.count(
             "uses: actions/upload-artifact@v4",
