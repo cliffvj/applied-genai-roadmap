@@ -24,16 +24,28 @@ PromptRequestFactory = Callable[..., PromptRequest]
 XDIST_AUTO_WORKERS = 2
 
 TEST_MODULE_MARKERS: dict[str, tuple[str, ...]] = {
+    "test_ci_workflow.py": (
+        "unit",
+        "contract",
+    ),
     "test_compose_files.py": (
         "unit",
         "contract",
     ),
     "test_config.py": ("unit",),
+    "test_container_ci_workflow.py": (
+        "unit",
+        "contract",
+    ),
     "test_container_files.py": (
         "unit",
         "contract",
     ),
     "test_container_smoke_script.py": (
+        "unit",
+        "contract",
+    ),
+    "test_dependabot_config.py": (
         "unit",
         "contract",
     ),
@@ -61,6 +73,14 @@ TEST_MODULE_MARKERS: dict[str, tuple[str, ...]] = {
     "test_prompt_routes.py": ("integration", "contract"),
     "test_prompt_schemas.py": ("unit", "contract"),
     "test_readiness_routes.py": ("integration", "contract"),
+    "test_release_metadata.py": (
+        "unit",
+        "contract",
+    ),
+    "test_release_workflow.py": (
+        "unit",
+        "contract",
+    ),
     "test_settings_integration.py": ("integration",),
     "test_settings_properties.py": ("unit", "property"),
     "test_system_routes.py": ("integration", "contract"),

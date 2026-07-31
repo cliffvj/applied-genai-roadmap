@@ -19,6 +19,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "cyclonedx-bom==7.3.1",
     "hypothesis>=6.163.0",
     "mypy>=1.17.0",
     "pre-commit>=4.2.0",

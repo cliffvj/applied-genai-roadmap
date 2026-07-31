@@ -1,0 +1,301 @@
+name: Phase 1 Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: phase1-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.12.13"
+  UV_VERSION: "0.12.0"
+  PROJECT_DIRECTORY: phase-01-foundation
+  IMAGE_PLATFORM: linux/amd64
+
+jobs:
+  release:
+    name: Build, attest, and publish release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    defaults:
+      run:
+        working-directory: phase-01-foundation
+        shell: bash
+
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          version: ${{ env.UV_VERSION }}
+          working-directory: ${{ env.PROJECT_DIRECTORY }}
+          enable-cache: true
+          cache-dependency-glob: |
+            phase-01-foundation/pyproject.toml
+            phase-01-foundation/uv.lock
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Display tool versions
+        run: |
+          python --version
+          uv --version
+          docker --version
+          docker buildx version
+          docker compose version
+          gh --version
+
+      - name: Validate release tag and package version
+        run: |
+          set -euo pipefail
+
+          tag_name="${GITHUB_REF_NAME}"
+
+          if [[ ! "${tag_name}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid semantic release tag: ${tag_name}" >&2
+            exit 1
+          fi
+
+          release_version="${tag_name#v}"
+
+          package_version="$(
+            python - <<'PY'
+          import tomllib
+          from pathlib import Path
+
+          project = tomllib.loads(
+              Path("pyproject.toml").read_text(
+                  encoding="utf-8",
+              ),
+          )
+
+          print(project["project"]["version"])
+          PY
+          )"
+
+          if [[ "${release_version}" != "${package_version}" ]]; then
+            printf \
+              'Tag version %s does not match package version %s.\n' \
+              "${release_version}" \
+              "${package_version}" \
+              >&2
+            exit 1
+          fi
+
+          release_notes="releases/${tag_name}.md"
+
+          if [[ ! -f "${release_notes}" ]]; then
+            echo \
+              "Release notes not found: ${release_notes}" \
+              >&2
+            exit 1
+          fi
+
+          echo "RELEASE_VERSION=${release_version}" \
+            >> "${GITHUB_ENV}"
+
+          echo "RELEASE_NOTES=${release_notes}" \
+            >> "${GITHUB_ENV}"
+
+      - name: Synchronize locked environment
+        run: uv sync --locked
+
+      - name: Check Ruff formatting
+        run: uv run --locked ruff format --check .
+
+      - name: Run Ruff linting
+        run: uv run --locked ruff check .
+
+      - name: Run MyPy
+        run: uv run --locked mypy
+
+      - name: Run full serial test profile
+        run: |
+          uv run --locked python \
+            scripts/test_runner.py full
+
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+
+      - name: Validate Dockerfile
+        run: docker build --check .
+
+      - name: Build Python distributions
+        run: uv build
+
+      - name: Build production container image
+        run: |
+          docker buildx build \
+            --target production \
+            --platform "${IMAGE_PLATFORM}" \
+            --pull \
+            --load \
+            --tag \
+              "applied-genai-foundation:${RELEASE_VERSION}" \
+            .
+
+      - name: Build mock model-service image
+        run: |
+          docker buildx build \
+            --target mock \
+            --platform "${IMAGE_PLATFORM}" \
+            --pull \
+            --load \
+            --tag \
+              "applied-genai-mock-model-service:${RELEASE_VERSION}" \
+            .
+
+      - name: Verify built image isolation
+        run: |
+          docker run \
+            --rm \
+            --entrypoint sh \
+            "applied-genai-foundation:${RELEASE_VERSION}" \
+            -c \
+            'test ! -e /app/scripts/mock_model_service.py'
+
+          docker run \
+            --rm \
+            --entrypoint sh \
+            "applied-genai-mock-model-service:${RELEASE_VERSION}" \
+            -c \
+            'test -f /app/scripts/mock_model_service.py'
+
+      - name: Prepare release assets
+        run: |
+          set -euo pipefail
+
+          rm -rf release-assets
+          mkdir -p release-assets
+
+          cp \
+            "dist/applied_genai_foundation-${RELEASE_VERSION}-py3-none-any.whl" \
+            release-assets/
+
+          cp \
+            "dist/applied_genai_foundation-${RELEASE_VERSION}.tar.gz" \
+            release-assets/
+
+          uv export \
+            --format requirements.txt \
+            --locked \
+            --no-dev \
+            --no-emit-project \
+            --no-hashes \
+            --output-file \
+              release-assets/runtime-requirements.txt
+
+          uv run --locked cyclonedx-py requirements \
+            release-assets/runtime-requirements.txt \
+            --pyproject pyproject.toml \
+            --mc-type application \
+            --spec-version 1.5 \
+            --output-format JSON \
+            --output-reproducible \
+            --output-file \
+              "release-assets/applied-genai-foundation-${RELEASE_VERSION}-sbom.cdx.json"
+
+          rm release-assets/runtime-requirements.txt
+
+          docker save \
+            "applied-genai-foundation:${RELEASE_VERSION}" \
+            | gzip \
+                --best \
+                --no-name \
+            > "release-assets/applied-genai-foundation-${RELEASE_VERSION}-linux-amd64.tar.gz"
+
+          docker save \
+            "applied-genai-mock-model-service:${RELEASE_VERSION}" \
+            | gzip \
+                --best \
+                --no-name \
+            > "release-assets/applied-genai-mock-model-service-${RELEASE_VERSION}-linux-amd64.tar.gz"
+
+      - name: Generate and verify checksums
+        run: |
+          set -euo pipefail
+
+          cd release-assets
+
+          sha256sum \
+            "applied_genai_foundation-${RELEASE_VERSION}-py3-none-any.whl" \
+            "applied_genai_foundation-${RELEASE_VERSION}.tar.gz" \
+            "applied-genai-foundation-${RELEASE_VERSION}-linux-amd64.tar.gz" \
+            "applied-genai-mock-model-service-${RELEASE_VERSION}-linux-amd64.tar.gz" \
+            "applied-genai-foundation-${RELEASE_VERSION}-sbom.cdx.json" \
+            > SHA256SUMS
+
+          sha256sum --check SHA256SUMS
+
+          ls -lh
+
+      - name: Generate release-asset provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: phase-01-foundation/release-assets/*
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create \
+            "${GITHUB_REF_NAME}" \
+            release-assets/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --verify-tag \
+            --title \
+              "Applied GenAI Foundation ${GITHUB_REF_NAME}" \
+            --notes-file "${RELEASE_NOTES}" \
+            --latest
+
+      - name: Verify published release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          gh release view \
+            "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --json \
+              tagName,isDraft,isPrerelease,url
+
+          while IFS= read -r release_asset
+          do
+            gh attestation verify \
+              "${release_asset}" \
+              --repo "${GITHUB_REPOSITORY}"
+          done < <(
+            find release-assets \
+              -maxdepth 1 \
+              -type f \
+              -print \
+              | sort
+          )
+
+      - name: Clean up container resources
+        if: always()
+        run: |
+          docker compose down \
+            --remove-orphans \
+            --volumes

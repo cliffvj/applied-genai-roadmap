@@ -286,6 +286,47 @@ uv run --project phase-01-foundation --locked \
   pre-commit run --all-files
 ```
 
+## Continuous Integration
+
+The repository applies the same core quality controls through GitHub Actions.
+
+### Python CI
+
+The Python workflow runs:
+
+- Locked environment synchronization
+- Ruff formatting checks
+- Ruff linting
+- Strict MyPy validation
+- Full serial testing
+- Full parallel testing
+- Python package builds
+- Coverage artifact collection
+
+### Container CI
+
+The container workflow runs:
+
+- Dockerfile and Compose validation
+- Static container contracts
+- Production and mock image builds
+- Image-content isolation checks
+- Hardened runtime validation
+- Dependency outage simulation
+- Readiness and health-state validation
+- Dependency recovery
+- Prompt generation after recovery
+
+### Release Validation
+
+The release workflow repeats the locked quality gates before creating release assets.
+
+A release is not published when formatting, linting, typing, tests, container validation, packaging, checksums, SBOM generation, or provenance generation fails.
+
+Read the complete guide:
+
+[Continuous Integration and Release Automation](continuous-integration.md)
+
 ## Generated Artifacts
 
 The following generated artifacts must not be committed:

@@ -28,7 +28,7 @@ By completing this phase, the project will demonstrate the ability to:
 | 5 | Async operations and external service client | Complete |
 | 6 | Automated testing and quality controls | Complete |
 | 7 | Containerization and health checks | Complete |
-| 8 | GitHub Actions, documentation, and release | Planned |
+| 8 | GitHub Actions, documentation, and release | Complete |
 
 ## Planned Application
 
@@ -51,8 +51,11 @@ phase-01-foundation/
 ├── docs/
 │   ├── configuration.md
 │   ├── containerization.md
+│   ├── continuous-integration.md
 │   └── model-service-integration.md
 │   └── testing.md
+├── releases/
+│   └── v0.1.0.md
 ├── scripts/
 │   ├── container_smoke_test.py
 │   └── mock_model_service.py
@@ -620,8 +623,67 @@ Read the complete guide:
 
 [Automated Testing and Quality Controls](docs/testing.md)
 
+## Continuous Integration and Release Automation
+
+Phase 1 includes separate GitHub Actions workflows for Python validation, container validation, and tagged releases.
+
+### Python CI
+
+The Python workflow validates:
+
+- Locked dependencies
+- Ruff formatting and linting
+- Strict MyPy typing
+- Full serial and parallel testing
+- Minimum 95% coverage
+- Wheel and source distribution builds
+
+### Container CI
+
+The container workflow validates:
+
+- Dockerfile and Compose configuration
+- Separate production and mock images
+- Non-root execution
+- Read-only filesystems
+- Linux security controls
+- Resource limits
+- Dependency failure
+- Health-state transitions
+- Automatic recovery
+
+### Dependency Maintenance
+
+Dependabot covers:
+
+- uv dependencies
+- GitHub Actions
+- Docker base images
+
+### Release Automation
+
+A semantic version tag produces:
+
+- Python wheel
+- Python source distribution
+- Production container archive
+- Mock model-service container archive
+- CycloneDX SBOM
+- SHA-256 checksum manifest
+- GitHub artifact provenance
+- GitHub Release publication
+
+Read the complete guide:
+
+[Continuous Integration and Release Automation](docs/continuous-integration.md)
+
 ## Status
 
-Commits 1 through 7 are complete.
+Phase 1 is complete.
 
-The project now includes a reproducible Python environment, automated formatting and linting, strict static typing, a packaged FastAPI service, validated Pydantic contracts, environment-based configuration, asynchronous external-service integration, dependency-aware readiness, validated prompt generation, centrally classified tests, deterministic test factories, property-based testing, parallel execution, timeout protection, branch coverage, a 95% coverage gate, a fast pre-commit suite, multi-stage container builds, non-root runtime images, hardened Docker Compose services, container health checks, resource guardrails, automated dependency-failure testing, and recovery verification.
+Commits 1 through 8 deliver a reproducible Python foundation, strict local and CI quality controls, a packaged FastAPI service, Pydantic request and response contracts, environment-based configuration, asynchronous model-service communication, bounded retries and timeouts, dependency-aware readiness, prompt generation, deterministic and property-based tests, parallel execution, branch coverage, a 95% coverage gate, hardened Linux containers, Docker Compose service networking, automated dependency-failure recovery, Python and container CI workflows, Dependabot maintenance, CycloneDX SBOM generation, release checksums, artifact provenance, and tag-driven GitHub Release automation.
+
+The first packaged release is:
+
+```text
+v0.1.0

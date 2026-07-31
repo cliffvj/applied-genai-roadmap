@@ -31,6 +31,6 @@ repos:
           python phase-01-foundation/scripts/test_runner.py fast
         language: system
         pass_filenames: false
-        files: '^(\.pre-commit-config\.yaml|phase-01-foundation/(\.dockerignore|Dockerfile|compose\.yaml|pyproject\.toml|uv\.lock|src/.*|tests/.*|scripts/.*))$'
+        files: '^(CHANGELOG\.md|\.pre-commit-config\.yaml|\.github/(workflows/.*\.ya?ml|dependabot\.yml)|phase-01-foundation/(\.dockerignore|Dockerfile|compose\.yaml|README\.md|pyproject\.toml|uv\.lock|docs/.*|releases/.*|src/.*|tests/.*|scripts/.*))$'
 
         

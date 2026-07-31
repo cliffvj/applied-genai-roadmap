@@ -1,0 +1,105 @@
+name: Phase 1 CI
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/phase1-ci.yml"
+      - ".pre-commit-config.yaml"
+      - "phase-01-foundation/**"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/phase1-ci.yml"
+      - ".pre-commit-config.yaml"
+      - "phase-01-foundation/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase1-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12.13"
+  UV_VERSION: "0.12.0"
+  PROJECT_DIRECTORY: phase-01-foundation
+
+jobs:
+  quality:
+    name: Python quality, tests, and package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: phase-01-foundation
+        shell: bash
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          version: ${{ env.UV_VERSION }}
+          working-directory: ${{ env.PROJECT_DIRECTORY }}
+          enable-cache: true
+          cache-dependency-glob: |
+            phase-01-foundation/pyproject.toml
+            phase-01-foundation/uv.lock
+
+      - name: Display tool versions
+        run: |
+          python --version
+          uv --version
+          docker --version
+          docker compose version
+
+      - name: Synchronize locked environment
+        run: uv sync --locked
+
+      - name: Check Ruff formatting
+        run: uv run --locked ruff format --check .
+
+      - name: Run Ruff linting
+        run: uv run --locked ruff check .
+
+      - name: Run MyPy
+        run: uv run --locked mypy
+
+      - name: Run full serial test profile
+        run: uv run --locked python scripts/test_runner.py full
+
+      - name: Run full parallel test profile
+        run: uv run --locked python scripts/test_runner.py parallel
+
+      - name: Build Python package
+        run: uv build
+
+      - name: Upload Python package
+        uses: actions/upload-artifact@v4
+        with:
+          name: applied-genai-foundation-package
+          path: phase-01-foundation/dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload HTML coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: applied-genai-foundation-coverage
+          path: phase-01-foundation/htmlcov/
+          if-no-files-found: ignore
+          retention-days: 7

@@ -40,7 +40,7 @@ Every phase may include:
 
 | Phase | Focus | Status |
 |---|---|---|
-| 1 | Python, FastAPI, testing, and development tooling | In Progress |
+| 1 | Python, FastAPI, testing, and development tooling | Complete |
 | 2 | Containers and local AI service composition | Planned |
 | 3 | Kubernetes for AI workloads | Planned |
 | 4 | Linux and NVIDIA GPU infrastructure | Planned |
@@ -66,7 +66,9 @@ This roadmap is designed to develop demonstrable competencies for roles such as:
 
 [Phase 1 — Foundation](phase-01-foundation/README.md)
 
-Current progress: Commits 1–7 are complete. The project now includes the Python toolchain, FastAPI service, Pydantic contracts, environment-based configuration, asynchronous model-service communication, dependency-aware readiness, validated prompt generation, strict test classification, property-based testing, deterministic parallel execution, timeout controls, a 95% coverage gate, multi-stage Docker images, a hardened Docker Compose environment, non-root execution, container health checks, resource limits, and automated dependency recovery testing.
+Phase 1 is complete. Commits 1–8 deliver the Python toolchain, FastAPI application, strict Pydantic contracts, asynchronous model-service integration, dependency-aware health checks, comprehensive automated testing, a 95% coverage gate, hardened container deployment, automated recovery testing, GitHub Actions CI, Dependabot maintenance, CycloneDX SBOM generation, release checksums, provenance attestations, and tag-driven release automation.
+
+Initial packaged release: `v0.1.0`
 
 ## Author
 

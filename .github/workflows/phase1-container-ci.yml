@@ -1,0 +1,205 @@
+name: Phase 1 Container CI
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/phase1-container-ci.yml"
+      - ".github/dependabot.yml"
+      - ".pre-commit-config.yaml"
+      - "phase-01-foundation/**"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/phase1-container-ci.yml"
+      - ".github/dependabot.yml"
+      - ".pre-commit-config.yaml"
+      - "phase-01-foundation/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase1-container-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12.13"
+  UV_VERSION: "0.12.0"
+  PROJECT_DIRECTORY: phase-01-foundation
+  IMAGE_VERSION: "0.1.0"
+
+jobs:
+  container:
+    name: Container build, hardening, and recovery
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+
+    defaults:
+      run:
+        working-directory: phase-01-foundation
+        shell: bash
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          version: ${{ env.UV_VERSION }}
+          working-directory: ${{ env.PROJECT_DIRECTORY }}
+          enable-cache: true
+          cache-dependency-glob: |
+            phase-01-foundation/pyproject.toml
+            phase-01-foundation/uv.lock
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Display tool versions
+        run: |
+          python --version
+          uv --version
+          docker --version
+          docker buildx version
+          docker compose version
+
+      - name: Synchronize locked environment
+        run: uv sync --locked
+
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+
+      - name: Validate Dockerfile
+        run: docker build --check .
+
+      - name: Run container contract tests
+        run: |
+          uv run --locked pytest \
+            tests/test_container_files.py \
+            tests/test_compose_files.py \
+            tests/test_container_smoke_script.py \
+            tests/test_container_ci_workflow.py \
+            tests/test_dependabot_config.py \
+            --no-cov
+
+      - name: Build production API image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./phase-01-foundation
+          file: ./phase-01-foundation/Dockerfile
+          target: production
+          platforms: linux/amd64
+          pull: true
+          load: true
+          push: false
+          tags: applied-genai-foundation:${{ env.IMAGE_VERSION }}
+          cache-from: type=gha,scope=phase1-production
+          cache-to: type=gha,mode=max,scope=phase1-production
+          provenance: false
+          sbom: false
+
+      - name: Build mock model-service image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./phase-01-foundation
+          file: ./phase-01-foundation/Dockerfile
+          target: mock
+          platforms: linux/amd64
+          pull: true
+          load: true
+          push: false
+          tags: applied-genai-mock-model-service:${{ env.IMAGE_VERSION }}
+          cache-from: type=gha,scope=phase1-mock
+          cache-to: type=gha,mode=max,scope=phase1-mock
+          provenance: false
+          sbom: false
+
+      - name: Inspect built images
+        run: |
+          docker image inspect \
+            "applied-genai-foundation:${IMAGE_VERSION}" \
+            --format \
+            'API user={{.Config.User}} command={{json .Config.Cmd}}'
+
+          docker image inspect \
+            "applied-genai-mock-model-service:${IMAGE_VERSION}" \
+            --format \
+            'Mock user={{.Config.User}} command={{json .Config.Cmd}}'
+
+      - name: Verify isolated image contents
+        run: |
+          docker run \
+            --rm \
+            --entrypoint sh \
+            "applied-genai-foundation:${IMAGE_VERSION}" \
+            -c 'test ! -e /app/scripts/mock_model_service.py'
+
+          docker run \
+            --rm \
+            --entrypoint sh \
+            "applied-genai-mock-model-service:${IMAGE_VERSION}" \
+            -c 'test -f /app/scripts/mock_model_service.py'
+
+      - name: Run hardened container smoke and recovery drill
+        run: |
+          uv run --locked python \
+            scripts/container_smoke_test.py \
+            --keep-running
+
+      - name: Capture container diagnostics
+        if: always()
+        run: |
+          mkdir -p container-artifacts
+
+          docker compose ps --all \
+            > container-artifacts/compose-ps.txt \
+            2>&1 || true
+
+          docker compose logs \
+            --timestamps \
+            --no-color \
+            > container-artifacts/compose-logs.txt \
+            2>&1 || true
+
+          container_ids="$(docker compose ps --all --quiet)"
+
+          if [[ -n "${container_ids}" ]]; then
+            docker inspect ${container_ids} \
+              > container-artifacts/container-inspect.json \
+              2>&1 || true
+          else
+            printf '[]\n' \
+              > container-artifacts/container-inspect.json
+          fi
+
+          docker image inspect \
+            "applied-genai-foundation:${IMAGE_VERSION}" \
+            "applied-genai-mock-model-service:${IMAGE_VERSION}" \
+            > container-artifacts/image-inspect.json \
+            2>&1 || true
+
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase1-container-failure-diagnostics
+          path: phase-01-foundation/container-artifacts/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Clean up Compose resources
+        if: always()
+        run: |
+          docker compose down \
+            --remove-orphans \
+            --volumes
