@@ -8,10 +8,10 @@ authors = [
     { name = "Clifford V. Juan" }
 ]
 dependencies = [
-    "fastapi>=0.139.2",
-    "httpx2>=2.9.1",
+    "fastapi>=0.141.1",
+    "httpx2>=2.10.0",
     "pydantic>=2.13.4",
-    "pydantic-settings>=2.14.2",
+    "pydantic-settings>=2.15.0",
     "python-dotenv>=1.2.2",
     "tenacity>=9.1.4",
     "uvicorn[standard]>=0.51.0",
@@ -20,14 +20,14 @@ dependencies = [
 [dependency-groups]
 dev = [
     "cyclonedx-bom==7.3.1",
-    "hypothesis>=6.163.0",
+    "hypothesis>=6.165.2",
     "mypy>=1.17.0",
-    "pre-commit>=4.2.0",
+    "pre-commit>=4.6.2",
     "pytest>=8.4.0",
     "pytest-cov>=6.2.0",
     "pytest-timeout>=2.4.0",
     "pytest-xdist>=3.8.0",
-    "ruff>=0.12.0",
+    "ruff>=0.16.2",
 ]
 
 [build-system]
