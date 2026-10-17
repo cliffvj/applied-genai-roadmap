@@ -250,7 +250,7 @@ jobs:
           ls -lh
 
       - name: Generate release-asset provenance
-        uses: actions/attest@v4
+        uses: actions/attest@v4.2.0
         with:
           subject-path: phase-01-foundation/release-assets/*
 
